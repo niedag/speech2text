@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Audio Submission</title>
+</head>
+<body>
+    <!-- Audio file upload form -->
+    <form id="uploadForm" action="/transcribe/" method="post" enctype="multipart/form-data">
+        {% csrf_token %}
+        <input type="file" name="audio_file" accept="audio/*">
+        <button type="submit">Upload Audio File</button>
+    </form>
+
+    <!-- Audio recording controls -->
+    <div>
+        <button id="startRecord">Start Recording</button>
+        <button id="stopRecord" disabled>Stop Recording</button>
+    </div>
+
+    <script>
+        let mediaRecorder;
+        let audioChunks = [];
+
+        document.getElementById("startRecord").onclick = function() {
+            navigator.mediaDevices.getUserMedia({ audio: true })
+                .then(stream => {
+                    mediaRecorder = new MediaRecorder(stream);
+                    mediaRecorder.ondataavailable = event => {
+                        audioChunks.push(event.data);
+                    };
+                    mediaRecorder.onstop = () => {
+                        const audioBlob = new Blob(audioChunks, { type: 'audio/wav' });
+                        const formData = new FormData();
+                        formData.append("audio_file", audioBlob, "recording.wav");
+
+                        // Use Fetch API to send the audio blob to the server
+                        fetch("/transcribe/", { method: "POST", body: formData })
+                            .then(response => response.text())
+                            .then(data => alert(data))
+                            .catch(error => console.error("Error:", error));
+                    };
+                    mediaRecorder.start();
+                    audioChunks = [];
+                    document.getElementById("stopRecord").disabled = false;
+                });
+        };
+
+        document.getElementById("stopRecord").onclick = function() {
+            mediaRecorder.stop();
+            document.getElementById("stopRecord").disabled = true;
+        };
+    </script>
+</body>
+</html>
