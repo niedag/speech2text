@@ -8,7 +8,7 @@
     <form id="uploadForm" action="/transcribe/" method="post" enctype="multipart/form-data">
         {% csrf_token %}
         <input type="file" name="audio_file" accept="audio/*">
-        <button type="submit">Upload Audio File</button>
+        <button type="submit">Submit Audio File</button>
     </form>
 
     <!-- Audio recording controls -->
@@ -21,7 +21,10 @@
         let mediaRecorder;
         let audioChunks = [];
 
-        document.getElementById("startRecord").onclick = function() {
+        const startRecordButton = document.getElementById("startRecord");
+        const stopRecordButton = document.getElementById("stopRecord");
+
+        startRecordButton.onclick = function() {
             navigator.mediaDevices.getUserMedia({ audio: true })
                 .then(stream => {
                     mediaRecorder = new MediaRecorder(stream);
@@ -33,21 +36,25 @@
                         const formData = new FormData();
                         formData.append("audio_file", audioBlob, "recording.wav");
 
-                        // Use Fetch API to send the audio blob to the server
                         fetch("/transcribe/", { method: "POST", body: formData })
                             .then(response => response.text())
                             .then(data => alert(data))
                             .catch(error => console.error("Error:", error));
+
+                        audioChunks = [];
+                        startRecordButton.disabled = false; // Re-enable the start record button
                     };
                     mediaRecorder.start();
                     audioChunks = [];
-                    document.getElementById("stopRecord").disabled = false;
+                    stopRecordButton.disabled = false; // Enable the stop record button
+                    startRecordButton.disabled = true; // Disable the start record button
                 });
         };
 
-        document.getElementById("stopRecord").onclick = function() {
+        stopRecordButton.onclick = function() {
             mediaRecorder.stop();
-            document.getElementById("stopRecord").disabled = true;
+            mediaRecorder.stream.getTracks().forEach(track => track.stop()); // Stop the media stream tracks
+            stopRecordButton.disabled = true; // Disable the stop record button
         };
     </script>
 </body>
